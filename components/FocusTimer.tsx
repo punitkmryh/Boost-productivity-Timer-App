@@ -481,7 +481,8 @@ const FocusTimer: React.FC<FocusTimerProps> = ({ isDarkMode = true }) => {
                     <h2 className={`text-2xl md:text-3xl font-bold mb-2 drop-shadow-lg ${themes[colorTheme].preview.replace('from-', 'text-').split(' ')[0]}`}>Time for a Break</h2>
                     <p className={`${isDarkMode ? 'text-slate-300' : 'text-slate-600'} text-sm md:text-lg leading-relaxed`}>
                         Step away, stretch, or hydrate.<br/>
-                        <span className={`${themes[colorTheme].text.split(' ')[2].replace('to-', 'text-')} font-medium`}>Recharge your mind.</span>
+                        {/* SAFE ACCESS TO LAST CLASS NAME (usually the 'to-' color) */}
+                        <span className={`${themes[colorTheme].text.split(' ').pop()?.replace('to-', 'text-') || 'text-blue-400'} font-medium`}>Recharge your mind.</span>
                     </p>
                 </div>
             )}

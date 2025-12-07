@@ -4,104 +4,31 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Boost Productivity</title>
-    <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <!-- Keep CDN for local preview if needed, but build process will use postcss -->
+    <script src="https://cdn.tailwindcss.com"></script>
     <script>
-      tailwind.config = {
+       // This configuration is primarily for the dev/preview environment.
+       // The production build uses tailwind.config.js
+       tailwind.config = {
         darkMode: 'class',
         theme: {
           extend: {
-            fontFamily: {
-              sans: ['Inter', 'sans-serif'],
-            },
+            fontFamily: { sans: ['Inter', 'sans-serif'] },
             colors: {
-              slate: {
-                850: '#151b28', // Custom dark background
-                900: '#0f172a',
-                950: '#020617',
-              },
-              blue: {
-                450: '#60a5fa',
-                550: '#3b82f6',
-              }
+              slate: { 850: '#151b28', 900: '#0f172a', 950: '#020617' },
+              blue: { 450: '#60a5fa', 550: '#3b82f6' }
             },
             animation: {
               'spin-slow': 'spin 12s linear infinite',
-              'spin-reverse-slow': 'spin-reverse 15s linear infinite',
-              'pulse-slow': 'pulse 4s cubic-bezier(0.4, 0, 0.6, 1) infinite',
               'float': 'float 6s ease-in-out infinite',
               'breathe': 'breathe 4s ease-in-out infinite',
-            },
-            keyframes: {
-              'spin-reverse': {
-                'from': { transform: 'rotate(360deg)' },
-                'to': { transform: 'rotate(0deg)' },
-              },
-              'float': {
-                '0%, 100%': { transform: 'translateY(0)' },
-                '50%': { transform: 'translateY(-10px)' },
-              },
-              'breathe': {
-                '0%, 100%': { transform: 'scale(1)', opacity: '0.5' },
-                '50%': { transform: 'scale(1.05)', opacity: '0.8' },
-              }
             }
-          },
-        },
-      }
+          }
+        }
+       }
     </script>
-    <style>
-      body {
-        background-color: #020617;
-        color: #f8fafc;
-        /* Subtle background noise/gradient - Dark Mode Default */
-        background-image: 
-          radial-gradient(at 0% 0%, rgba(56, 189, 248, 0.1) 0px, transparent 50%),
-          radial-gradient(at 100% 0%, rgba(139, 92, 246, 0.1) 0px, transparent 50%);
-        background-attachment: fixed;
-        transition: background-color 0.5s ease;
-      }
-      
-      /* Light Mode Overrides */
-      .light-mode {
-        background-color: #f8fafc;
-        color: #0f172a;
-        background-image: 
-          radial-gradient(at 0% 0%, rgba(56, 189, 248, 0.05) 0px, transparent 50%),
-          radial-gradient(at 100% 0%, rgba(139, 92, 246, 0.05) 0px, transparent 50%);
-      }
-
-      /* Custom scrollbar */
-      ::-webkit-scrollbar {
-        width: 6px;
-        height: 6px;
-      }
-      ::-webkit-scrollbar-track {
-        background: transparent;
-      }
-      ::-webkit-scrollbar-thumb {
-        background: #334155;
-        border-radius: 3px;
-      }
-      ::-webkit-scrollbar-thumb:hover {
-        background: #475569;
-      }
-      
-      .glass-panel {
-        background: rgba(30, 41, 59, 0.4);
-        backdrop-filter: blur(12px);
-        -webkit-backdrop-filter: blur(12px);
-        border: 1px solid rgba(255, 255, 255, 0.05);
-        transition: all 0.3s ease;
-      }
-
-      .light-mode .glass-panel {
-        background: rgba(255, 255, 255, 0.6);
-        border: 1px solid rgba(0, 0, 0, 0.05);
-        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03);
-      }
-    </style>
-  <script type="importmap">
+    <script type="importmap">
 {
   "imports": {
     "react": "https://aistudiocdn.com/react@^19.2.1",
@@ -109,12 +36,15 @@
     "@google/genai": "https://aistudiocdn.com/@google/genai@^1.31.0",
     "lucide-react": "https://aistudiocdn.com/lucide-react@^0.556.0",
     "recharts": "https://aistudiocdn.com/recharts@^3.5.1",
-    "react-dom/": "https://aistudiocdn.com/react-dom@^19.2.1/"
+    "react-dom/": "https://aistudiocdn.com/react-dom@^19.2.1/",
+    "vite": "https://aistudiocdn.com/vite@^7.2.6",
+    "@vitejs/plugin-react": "https://aistudiocdn.com/@vitejs/plugin-react@^5.1.1"
   }
 }
 </script>
-</head>
+  </head>
   <body>
     <div id="root"></div>
+    <script type="module" src="/index.tsx"></script>
   </body>
 </html>

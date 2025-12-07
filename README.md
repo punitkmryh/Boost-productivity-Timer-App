@@ -1,20 +1,36 @@
-<div align="center">
-<img width="1200" height="475" alt="GHBanner" src="https://github.com/user-attachments/assets/0aa67016-6eaf-458a-adb2-6e31a0763ed6" />
-</div>
+# Boost Productivity App
 
-# Run and deploy your AI Studio app
+A comprehensive productivity tracking application built with React, TypeScript, and Tailwind CSS.
 
-This contains everything you need to run your app locally.
+## Features
+- **Focus Timer:** High-end animated timer with soundscapes and break modes.
+- **Habit Tracker:** Weekly and Monthly tracking with streaks and levels.
+- **To-Do List:** AI-powered task suggestions and priority management.
+- **Analytics:** Visual charts and productivity insights.
+- **Boost Center:** Gamification and breathing exercises.
 
-View your app in AI Studio: https://ai.studio/apps/drive/1daQk2SPYWyoCKmhubbI3wR_V5VjiRJOl
+## Setup & Deployment
 
-## Run Locally
+### 1. Install Dependencies
+```bash
+npm install
+```
 
-**Prerequisites:**  Node.js
+### 2. Local Development
+```bash
+npm run dev
+```
 
+### 3. Deploy to GitHub Pages
+1. Open `package.json` and ensure the `homepage` field is not set (Vite handles base path via config).
+2. Run the deploy script:
+```bash
+npm run deploy
+```
+This command builds the project to the `dist` folder and pushes it to the `gh-pages` branch of your repository.
 
-1. Install dependencies:
-   `npm install`
-2. Set the `GEMINI_API_KEY` in [.env.local](.env.local) to your Gemini API key
-3. Run the app:
-   `npm run dev`
+### API Key
+To use the AI features (Gemini), create a `.env` file in the root directory:
+```
+VITE_API_KEY=your_gemini_api_key_here
+```
