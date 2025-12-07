@@ -10,7 +10,7 @@ export default defineConfig(({ mode }) => {
     base: './', 
     define: {
       // Polyfill process.env for the service file
-      'process.env.API_KEY': JSON.stringify(env.API_KEY || env.VITE_API_KEY),
+      'process.env.API_KEY': JSON.stringify(env.API_KEY || env.VITE_API_KEY || "AIzaSyCAnyeuCdzR1WNalTDJ_mxm3m50tbtoUY4"),
     },
     build: {
       outDir: 'dist',
