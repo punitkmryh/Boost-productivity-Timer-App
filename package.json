@@ -2,6 +2,7 @@
   "name": "boost-productivity-app",
   "private": true,
   "version": "1.0.0",
+  "homepage": "https://punitkmryh.github.io/Boost-productivity-Timer-App",
   "type": "module",
   "scripts": {
     "dev": "vite",
@@ -13,7 +14,7 @@
   "dependencies": {
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
-    "@google/genai": "^0.1.0",
+    "@google/genai": "^0.2.0",
     "lucide-react": "^0.294.0",
     "recharts": "^2.10.3",
     "clsx": "^2.0.0",
