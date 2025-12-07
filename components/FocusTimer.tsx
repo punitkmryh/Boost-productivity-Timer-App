@@ -492,7 +492,7 @@ const FocusTimer: React.FC<FocusTimerProps> = ({ isDarkMode = true }) => {
             : isActive ? `opacity-60 scale-125` : `opacity-20 scale-90`
         }`} style={{ backgroundColor: mode === 'focus' ? themes[colorTheme].stops[1] + '15' : undefined }}></div>
 
-        <div className="flex-1 w-full flex flex-col items-center justify-center relative z-10 py-4">
+        <div className="flex-1 w-full flex flex-col items-center justify-center relative z-10 py-4 gap-8 md:gap-12">
 
             {mode === 'break' && (
                 <div className="absolute top-[5%] md:top-[10%] w-full max-w-md text-center z-20 animate-fade-in px-6">
@@ -504,8 +504,8 @@ const FocusTimer: React.FC<FocusTimerProps> = ({ isDarkMode = true }) => {
                 </div>
             )}
 
-            <div className={`relative transition-all duration-1000 ease-in-out flex items-center justify-center my-4 ${mode === 'break' ? 'scale-90 translate-y-6' : 'scale-100'}`}>
-                 <div className="relative w-[65vmin] h-[65vmin] max-w-[400px] max-h-[400px] aspect-square flex items-center justify-center">
+            <div className={`relative transition-all duration-1000 ease-in-out flex items-center justify-center ${mode === 'break' ? 'scale-90 translate-y-6' : 'scale-100'}`}>
+                 <div className="relative w-[70vmin] h-[70vmin] max-w-[550px] max-h-[550px] aspect-square flex items-center justify-center">
                     <svg className="w-full h-full transform -rotate-90 overflow-visible" viewBox="0 0 500 500">
                         <defs>
                             <linearGradient id="focusGradient" x1="0%" y1="0%" x2="100%" y2="0%">
