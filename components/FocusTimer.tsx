@@ -2,15 +2,21 @@
 import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react';
 import { Play, Pause, RotateCcw, Maximize2, Minimize2, Music, Volume2, VolumeX, Clock, CloudRain, Zap, Wind, ArrowRight, Palette, Coffee, Moon, Trees, Layers } from 'lucide-react';
 
+interface FocusTimerProps {
+  isDarkMode?: boolean;
+}
+
 const ZenParticles = ({ color }: { color: string }) => {
   const particles = useMemo(() => {
-    return Array.from({ length: 40 }).map((_, i) => ({
+    return Array.from({ length: 50 }).map((_, i) => ({
       left: Math.random() * 100,
       top: Math.random() * 100,
-      delay: Math.random() * 5,
-      duration: 10 + Math.random() * 10, // Slower, smoother duration
+      delay: Math.random() * 20,
+      duration: 15 + Math.random() * 20, // Slower, smoother duration
       size: Math.random() * 3 + 1,
-      opacity: Math.random() * 0.4 + 0.1
+      opacity: Math.random() * 0.4 + 0.1,
+      tx: Math.random() * 40 - 20, // Random x translation
+      ty: Math.random() * 40 - 20  // Random y translation
     }));
   }, []);
 
@@ -19,7 +25,7 @@ const ZenParticles = ({ color }: { color: string }) => {
       {particles.map((p, i) => (
         <div
           key={i}
-          className="absolute rounded-full animate-float transition-all ease-in-out"
+          className="absolute rounded-full"
           style={{
             left: `${p.left}%`,
             top: `${p.top}%`,
@@ -27,8 +33,8 @@ const ZenParticles = ({ color }: { color: string }) => {
             height: `${p.size}px`,
             backgroundColor: color,
             opacity: p.opacity,
-            animationDuration: `${p.duration}s`,
-            animationDelay: `${p.delay}s`,
+            animation: `float-particle ${p.duration}s ease-in-out infinite alternate`,
+            animationDelay: `-${p.delay}s`,
             boxShadow: `0 0 ${p.size * 2}px ${color}`
           }}
         />
@@ -37,7 +43,7 @@ const ZenParticles = ({ color }: { color: string }) => {
   );
 };
 
-const FocusTimer: React.FC = () => {
+const FocusTimer: React.FC<FocusTimerProps> = ({ isDarkMode = true }) => {
   const [mode, setMode] = useState<'focus' | 'break'>('focus');
   const [isActive, setIsActive] = useState(false);
   const [customGoal, setCustomGoal] = useState('');
@@ -71,7 +77,7 @@ const FocusTimer: React.FC = () => {
         text: 'from-white to-blue-200',
         preview: 'from-cyan-400 to-blue-600',
         glow: 'rgba(59,130,246,0.6)',
-        bg: 'from-blue-900/20 via-[#020617] to-[#020617]',
+        bg: isDarkMode ? 'from-blue-900/20 via-[#020617] to-[#020617]' : 'from-blue-100/50 via-white to-white',
         accent: '#3b82f6'
     },
     purple: { 
@@ -79,7 +85,7 @@ const FocusTimer: React.FC = () => {
         text: 'from-purple-100 to-fuchsia-300',
         preview: 'from-purple-400 to-fuchsia-600',
         glow: 'rgba(168,85,247,0.6)',
-        bg: 'from-purple-900/20 via-[#020617] to-[#020617]',
+        bg: isDarkMode ? 'from-purple-900/20 via-[#020617] to-[#020617]' : 'from-purple-100/50 via-white to-white',
         accent: '#a855f7'
     },
     rose: { 
@@ -87,7 +93,7 @@ const FocusTimer: React.FC = () => {
         text: 'from-rose-100 to-pink-300',
         preview: 'from-rose-400 to-pink-600',
         glow: 'rgba(244,63,94,0.6)',
-        bg: 'from-rose-900/20 via-[#020617] to-[#020617]',
+        bg: isDarkMode ? 'from-rose-900/20 via-[#020617] to-[#020617]' : 'from-rose-100/50 via-white to-white',
         accent: '#f43f5e'
     },
     amber: { 
@@ -95,7 +101,7 @@ const FocusTimer: React.FC = () => {
         text: 'from-amber-100 to-orange-300',
         preview: 'from-amber-400 to-orange-600',
         glow: 'rgba(245,158,11,0.6)',
-        bg: 'from-amber-900/20 via-[#020617] to-[#020617]',
+        bg: isDarkMode ? 'from-amber-900/20 via-[#020617] to-[#020617]' : 'from-amber-100/50 via-white to-white',
         accent: '#f59e0b'
     },
     emerald: {
@@ -103,7 +109,7 @@ const FocusTimer: React.FC = () => {
         text: 'from-emerald-100 to-teal-300',
         preview: 'from-emerald-400 to-teal-600',
         glow: 'rgba(16,185,129,0.6)',
-        bg: 'from-emerald-900/20 via-[#020617] to-[#020617]',
+        bg: isDarkMode ? 'from-emerald-900/20 via-[#020617] to-[#020617]' : 'from-emerald-100/50 via-white to-white',
         accent: '#10b981'
     }
   };
@@ -372,6 +378,12 @@ const FocusTimer: React.FC = () => {
             0%, 100% { opacity: 0.15; transform: scale(1); }
             50% { opacity: 0.25; transform: scale(1.1); }
           }
+          @keyframes float-particle {
+             0% { transform: translate(0, 0); }
+             33% { transform: translate(15px, -20px); }
+             66% { transform: translate(-10px, -40px); }
+             100% { transform: translate(5px, -60px); }
+          }
           .animate-float-slow {
             animation: float-slow 20s ease-in-out infinite alternate;
           }
@@ -383,17 +395,27 @@ const FocusTimer: React.FC = () => {
           }
         `}</style>
 
-        {/* Dynamic Background Layer */}
-        <div className={`absolute inset-0 bg-gradient-to-br ${themes[colorTheme].bg} transition-all duration-1000 -z-20`}></div>
+        {/* Dynamic Background Layer with Grid Pattern */}
+        <div 
+            className={`absolute inset-0 transition-all duration-1000 -z-20`}
+            style={{ 
+                background: isDarkMode ? '#020617' : '#f8fafc',
+                backgroundImage: `radial-gradient(${themes[colorTheme].accent}1A 1px, transparent 1px)`,
+                backgroundSize: '40px 40px'
+            }}
+        ></div>
+        
+        {/* Dynamic Background Gradients */}
+        <div className={`absolute inset-0 bg-gradient-to-br ${themes[colorTheme].bg} transition-all duration-1000 -z-20 opacity-80`}></div>
         
         {/* Zen Mode Dark Overlay */}
-        <div className={`absolute inset-0 bg-black/60 transition-opacity duration-1000 -z-15 pointer-events-none ${isZenMode ? 'opacity-100' : 'opacity-0'}`}></div>
+        <div className={`absolute inset-0 bg-black/80 backdrop-blur-sm transition-opacity duration-1000 -z-15 pointer-events-none ${isZenMode ? 'opacity-100' : 'opacity-0'}`}></div>
 
         {/* Zen Particles */}
         {isZenMode && <ZenParticles color={themes[colorTheme].accent} />}
 
         {/* Floating Animated Orbs with Smoother Motion */}
-        <div className={`absolute inset-0 overflow-hidden pointer-events-none -z-10 transition-opacity duration-1000 ${isZenMode ? 'opacity-30' : 'opacity-100'}`}>
+        <div className={`absolute inset-0 overflow-hidden pointer-events-none -z-10 transition-opacity duration-1000 ${isZenMode ? 'opacity-20' : 'opacity-100'}`}>
             {bgEffects && (
                 <>
                     <div 
@@ -423,7 +445,7 @@ const FocusTimer: React.FC = () => {
         </div>
 
         {/* Real-time Clock */}
-        <div className={`absolute top-6 left-6 flex items-center gap-2 text-slate-500 font-mono text-sm transition-all duration-500 group ${isZenMode ? 'opacity-20 hover:opacity-100' : 'opacity-100'}`}>
+        <div className={`absolute top-6 left-6 flex items-center gap-2 text-slate-500 font-mono text-sm transition-all duration-500 group z-50 ${isZenMode ? 'opacity-20 hover:opacity-100' : 'opacity-100'}`}>
             <Clock size={16} />
             {currentTime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
         </div>
@@ -436,7 +458,7 @@ const FocusTimer: React.FC = () => {
             </div>
             <button 
                 onClick={() => setIsZenMode(!isZenMode)}
-                className="p-3 bg-slate-800/40 hover:bg-slate-700/60 text-slate-400 hover:text-white rounded-full backdrop-blur-md border border-white/5 transition-all shadow-lg"
+                className={`p-3 rounded-full backdrop-blur-md border transition-all shadow-lg ${isDarkMode ? 'bg-slate-800/40 hover:bg-slate-700/60 text-slate-400 hover:text-white border-white/5' : 'bg-white/40 hover:bg-white/60 text-slate-500 hover:text-slate-900 border-black/5'}`}
                 title={isZenMode ? "Exit Zen Mode" : "Enter Zen Mode"}
             >
                 {isZenMode ? <Minimize2 size={20} /> : <Maximize2 size={20} />}
@@ -456,10 +478,10 @@ const FocusTimer: React.FC = () => {
             {/* Break Message */}
             {mode === 'break' && (
                 <div className="absolute top-[5%] md:top-[10%] w-full max-w-md text-center z-20 animate-fade-in px-6">
-                    <h2 className="text-2xl md:text-3xl font-bold text-emerald-400 mb-2 drop-shadow-lg">Time for a Break</h2>
-                    <p className="text-slate-300 text-sm md:text-lg leading-relaxed">
+                    <h2 className={`text-2xl md:text-3xl font-bold mb-2 drop-shadow-lg ${themes[colorTheme].preview.replace('from-', 'text-').split(' ')[0]}`}>Time for a Break</h2>
+                    <p className={`${isDarkMode ? 'text-slate-300' : 'text-slate-600'} text-sm md:text-lg leading-relaxed`}>
                         Step away, stretch, or hydrate.<br/>
-                        <span className="text-emerald-500/80 font-medium">Recharge your mind.</span>
+                        <span className={`${themes[colorTheme].text.split(' ')[2].replace('to-', 'text-')} font-medium`}>Recharge your mind.</span>
                     </p>
                 </div>
             )}
@@ -486,9 +508,9 @@ const FocusTimer: React.FC = () => {
                             </linearGradient>
 
                             <linearGradient id="breakGradient" x1="0%" y1="0%" x2="100%" y2="100%">
-                                <stop offset="0%" stopColor="#34d399" /> 
-                                <stop offset="50%" stopColor="#10b981" /> 
-                                <stop offset="100%" stopColor="#059669" /> 
+                                <stop offset="0%" stopColor={themes[colorTheme].stops[0]} /> 
+                                <stop offset="50%" stopColor={themes[colorTheme].stops[1]} /> 
+                                <stop offset="100%" stopColor={themes[colorTheme].stops[2]} /> 
                             </linearGradient>
                             
                             {/* High-End Glow Filter */}
@@ -516,10 +538,10 @@ const FocusTimer: React.FC = () => {
                                         strokeWidth={isMajor ? 2.5 : 1}
                                         className={`transition-all duration-300 ease-out ${
                                             mode === 'break'
-                                                ? (isLit ? 'text-emerald-400' : 'text-slate-800')
+                                                ? (isLit ? 'text-slate-400' : (isDarkMode ? 'text-slate-800' : 'text-slate-200'))
                                                 : (isLit 
-                                                    ? `text-slate-300` 
-                                                    : 'text-slate-800'
+                                                    ? (isDarkMode ? 'text-slate-300' : 'text-slate-400') 
+                                                    : (isDarkMode ? 'text-slate-800' : 'text-slate-200')
                                                 )
                                         }`}
                                         style={{
@@ -533,7 +555,7 @@ const FocusTimer: React.FC = () => {
 
                         {/* 2. Outer Rotating Spinner (Subtle) */}
                         <g className={`origin-center opacity-30 transition-all duration-[5000ms] ${isActive ? 'animate-spin-slow' : ''}`} style={{transformBox: 'fill-box', transformOrigin: 'center'}}>
-                            <circle cx="250" cy="250" r={250} stroke="#334155" strokeWidth="1" fill="none" strokeDasharray="2, 8" />
+                            <circle cx="250" cy="250" r={250} stroke={isDarkMode ? "#334155" : "#cbd5e1"} strokeWidth="1" fill="none" strokeDasharray="2, 8" />
                         </g>
 
                         {/* 3. Glassy Background Track (Breathing) */}
@@ -541,7 +563,7 @@ const FocusTimer: React.FC = () => {
                             cx="250"
                             cy="250"
                             r={radius}
-                            stroke="#1e293b"
+                            stroke={isDarkMode ? "#1e293b" : "#e2e8f0"}
                             strokeWidth="12"
                             fill="none"
                             className={`drop-shadow-inner transition-opacity duration-1000 ${isActive ? 'opacity-40' : 'opacity-60 animate-pulse-slow'}`}
@@ -574,7 +596,7 @@ const FocusTimer: React.FC = () => {
                                 cx="250" 
                                 cy={250 - radius} 
                                 r="24" 
-                                fill={mode === 'focus' ? themes[colorTheme].stops[1] : '#10b981'}
+                                fill={themes[colorTheme].stops[1]}
                                 className={`${isActive ? 'opacity-30' : 'opacity-0'}`} 
                                 style={{ filter: 'blur(12px)' }}
                              />
@@ -583,7 +605,7 @@ const FocusTimer: React.FC = () => {
                                 cx="250" 
                                 cy={250 - radius} 
                                 r="12" 
-                                fill={mode === 'focus' ? themes[colorTheme].stops[0] : '#34d399'}
+                                fill={themes[colorTheme].stops[0]}
                                 className={`${isActive ? 'opacity-60' : 'opacity-0'} animate-pulse`} 
                                 style={{ filter: 'blur(3px)' }}
                              />
@@ -604,7 +626,7 @@ const FocusTimer: React.FC = () => {
                             strokeWidth="1" 
                             fill="none"
                             strokeDasharray="4 4"
-                            className={`text-slate-700 transition-all duration-1000 ${isActive ? 'opacity-50 animate-pulse-slow' : 'opacity-20'}`}
+                            className={`text-slate-500 transition-all duration-1000 ${isActive ? 'opacity-50 animate-pulse-slow' : 'opacity-20'}`}
                          />
 
                     </svg>
@@ -615,19 +637,19 @@ const FocusTimer: React.FC = () => {
                         <div className="flex flex-col items-center justify-center translate-y-1"> 
                             <div className={`text-[14vmin] md:text-8xl font-mono font-bold tracking-tighter tabular-nums transition-all duration-300 leading-none ${
                                 mode === 'break' 
-                                ? 'text-emerald-400 drop-shadow-[0_0_30px_rgba(16,185,129,0.3)]' 
+                                ? `text-transparent bg-clip-text bg-gradient-to-br ${themes[colorTheme].text} drop-shadow-lg`
                                 : isActive 
                                     ? `text-transparent bg-clip-text bg-gradient-to-br ${themes[colorTheme].text} drop-shadow-xl scale-110` 
-                                    : 'text-slate-300'
+                                    : isDarkMode ? 'text-slate-300' : 'text-slate-700'
                             }`}>
                                 {formatTime(timeLeft)}
                             </div>
                             <div className={`mt-3 sm:mt-5 px-4 py-1.5 sm:px-5 sm:py-2 rounded-full border backdrop-blur-md text-[10px] sm:text-xs font-bold uppercase tracking-[0.2em] transition-all duration-300 ${
                                 mode === 'break'
-                                ? 'bg-emerald-500/20 text-emerald-300 border-emerald-500/30 shadow-[0_0_20px_rgba(16,185,129,0.2)]'
+                                ? `bg-${colorTheme}-500/20 text-${colorTheme}-500 border-${colorTheme}-500/30`
                                 : isActive 
                                     ? `bg-opacity-20 text-white border-opacity-30 animate-pulse`
-                                    : 'bg-slate-800/50 text-slate-500 border-white/5'
+                                    : isDarkMode ? 'bg-slate-800/50 text-slate-500 border-white/5' : 'bg-slate-200/50 text-slate-500 border-black/5'
                             }`} style={{
                                 backgroundColor: isActive && mode === 'focus' ? themes[colorTheme].stops[1] + '33' : undefined,
                                 borderColor: isActive && mode === 'focus' ? themes[colorTheme].stops[1] + '4D' : undefined,
@@ -642,8 +664,8 @@ const FocusTimer: React.FC = () => {
 
             {/* Controls Panel */}
             <div className={`w-full max-w-3xl transition-all duration-700 transform px-4 z-20 ${isZenMode ? 'translate-y-20 opacity-0 pointer-events-none scale-95' : 'translate-y-0 opacity-100 scale-100'}`}>
-                <div className="glass-panel rounded-3xl p-1 shadow-2xl">
-                    <div className="bg-[#0f172a]/80 rounded-[20px] p-6 md:p-8 lg:p-10">
+                <div className={`rounded-3xl p-1 shadow-2xl ${isDarkMode ? 'glass-panel' : 'bg-white border border-slate-200'}`}>
+                    <div className={`rounded-[20px] p-6 md:p-8 lg:p-10 ${isDarkMode ? 'bg-[#0f172a]/80' : 'bg-slate-50'}`}>
                         
                         {/* Mode Specific Controls */}
                         {mode === 'focus' ? (
@@ -659,7 +681,11 @@ const FocusTimer: React.FC = () => {
                                                 onChange={(e) => setCustomGoal(e.target.value)}
                                                 placeholder="What is your focus?"
                                                 disabled={isActive}
-                                                className="w-full bg-slate-900 border border-slate-700 rounded-xl pl-4 pr-4 py-3 text-white placeholder-slate-600 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 outline-none transition-all disabled:opacity-50"
+                                                className={`w-full border rounded-xl pl-4 pr-4 py-3 focus:outline-none transition-all disabled:opacity-50 ${
+                                                    isDarkMode 
+                                                    ? 'bg-slate-900 border-slate-700 text-white placeholder-slate-600 focus:border-blue-500' 
+                                                    : 'bg-white border-slate-200 text-slate-900 placeholder-slate-400 focus:border-blue-500'
+                                                }`}
                                             />
                                         </div>
                                     </div>
@@ -671,7 +697,11 @@ const FocusTimer: React.FC = () => {
                                                 value={focusDuration}
                                                 onChange={(e) => handleDurationChange(parseInt(e.target.value) || 25, 'focus')}
                                                 disabled={isActive}
-                                                className="w-full bg-slate-900 border border-slate-700 rounded-xl px-2 py-3 text-white text-center font-mono font-bold focus:border-blue-500 outline-none transition-all disabled:opacity-50"
+                                                className={`w-full border rounded-xl px-2 py-3 text-center font-mono font-bold focus:outline-none transition-all disabled:opacity-50 ${
+                                                    isDarkMode 
+                                                    ? 'bg-slate-900 border-slate-700 text-white focus:border-blue-500' 
+                                                    : 'bg-white border-slate-200 text-slate-900 focus:border-blue-500'
+                                                }`}
                                             />
                                         </div>
                                         <div className="w-24 group">
@@ -681,7 +711,11 @@ const FocusTimer: React.FC = () => {
                                                 value={breakDuration}
                                                 onChange={(e) => handleDurationChange(parseInt(e.target.value) || 5, 'break')}
                                                 disabled={isActive}
-                                                className="w-full bg-slate-900 border border-slate-700 rounded-xl px-2 py-3 text-white text-center font-mono font-bold focus:border-emerald-500 outline-none transition-all disabled:opacity-50"
+                                                className={`w-full border rounded-xl px-2 py-3 text-center font-mono font-bold focus:outline-none transition-all disabled:opacity-50 ${
+                                                    isDarkMode 
+                                                    ? 'bg-slate-900 border-slate-700 text-white focus:border-emerald-500' 
+                                                    : 'bg-white border-slate-200 text-slate-900 focus:border-emerald-500'
+                                                }`}
                                             />
                                         </div>
                                     </div>
@@ -705,7 +739,11 @@ const FocusTimer: React.FC = () => {
                                     {!isActive && timeLeft !== focusDuration * 60 * 1000 && (
                                          <button
                                             onClick={resetTimer}
-                                            className="px-5 rounded-xl bg-slate-800 border border-slate-700 text-slate-400 hover:text-white hover:border-slate-500 transition-all active:scale-95"
+                                            className={`px-5 rounded-xl border transition-all active:scale-95 ${
+                                                isDarkMode 
+                                                ? 'bg-slate-800 border-slate-700 text-slate-400 hover:text-white hover:border-slate-500' 
+                                                : 'bg-white border-slate-200 text-slate-500 hover:text-slate-900 hover:border-slate-300'
+                                            }`}
                                         >
                                             <RotateCcw size={20} />
                                         </button>
@@ -714,7 +752,11 @@ const FocusTimer: React.FC = () => {
                                     {!isActive && (
                                         <button 
                                             onClick={() => switchMode('break')}
-                                            className="px-5 rounded-xl bg-slate-800 border border-slate-700 text-emerald-500 hover:text-emerald-400 hover:bg-emerald-500/10 hover:border-emerald-500/50 transition-all active:scale-95"
+                                            className={`px-5 rounded-xl border transition-all active:scale-95 ${
+                                                isDarkMode 
+                                                ? 'bg-slate-800 border-slate-700 text-emerald-500 hover:text-emerald-400 hover:bg-emerald-500/10 hover:border-emerald-500/50' 
+                                                : 'bg-white border-slate-200 text-emerald-600 hover:text-emerald-700 hover:bg-emerald-50 hover:border-emerald-300'
+                                            }`}
                                             title="Skip to Break"
                                         >
                                             <Coffee size={20} />
@@ -735,8 +777,10 @@ const FocusTimer: React.FC = () => {
                                             }}
                                             className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all border ${
                                                 breakDuration === m 
-                                                ? 'bg-emerald-600 text-white border-emerald-500' 
-                                                : 'bg-slate-800 text-slate-400 border-slate-700 hover:border-emerald-500 hover:text-white'
+                                                ? `bg-${colorTheme}-600 text-white border-${colorTheme}-500` 
+                                                : isDarkMode 
+                                                    ? 'bg-slate-800 text-slate-400 border-slate-700 hover:text-white' 
+                                                    : 'bg-white text-slate-500 border-slate-200 hover:text-slate-900'
                                             }`}
                                         >
                                             {m}m
@@ -750,14 +794,18 @@ const FocusTimer: React.FC = () => {
                                         className={`px-8 py-3 rounded-xl font-bold transition-all active:scale-95 ${
                                             isActive 
                                             ? 'bg-slate-700 text-slate-300' 
-                                            : 'bg-emerald-600 text-white hover:bg-emerald-500 shadow-lg shadow-emerald-900/20'
+                                            : `bg-${colorTheme}-600 text-white hover:bg-${colorTheme}-500 shadow-lg`
                                         }`}
                                     >
                                         {isActive ? 'Pause Break' : 'Resume Break'}
                                     </button>
                                     <button
                                         onClick={() => switchMode('focus')}
-                                        className="px-8 py-3 rounded-xl font-bold bg-slate-800 text-slate-300 hover:text-white border border-slate-700 hover:bg-slate-700 transition-all active:scale-95 flex items-center gap-2"
+                                        className={`px-8 py-3 rounded-xl font-bold border transition-all active:scale-95 flex items-center gap-2 ${
+                                            isDarkMode 
+                                            ? 'bg-slate-800 text-slate-300 hover:text-white border-slate-700 hover:bg-slate-700' 
+                                            : 'bg-white text-slate-600 hover:text-slate-900 border-slate-200 hover:bg-slate-50'
+                                        }`}
                                     >
                                         End Early <ArrowRight size={16} />
                                     </button>
@@ -767,7 +815,7 @@ const FocusTimer: React.FC = () => {
 
                         {/* Soundscape & Theme Options - Only in Focus Mode */}
                         {mode === 'focus' && (
-                            <div className="mt-8 pt-8 border-t border-slate-800 space-y-6">
+                            <div className={`mt-8 pt-8 border-t space-y-6 ${isDarkMode ? 'border-slate-800' : 'border-slate-200'}`}>
                                 {/* Soundscape Options */}
                                 <div className="flex flex-col gap-4">
                                     <div className="flex items-center gap-2 text-xs font-bold text-slate-400 uppercase tracking-wider">
@@ -788,13 +836,15 @@ const FocusTimer: React.FC = () => {
                                                 className={`flex flex-col items-center justify-center p-2 rounded-xl border transition-all duration-200 group active:scale-95 ${
                                                     soundMood === opt.id && soundEnabled
                                                     ? `bg-${opt.color}-500/20 border-${opt.color}-500 shadow-[0_0_15px_rgba(0,0,0,0.2)]`
-                                                    : 'bg-slate-800/40 border-slate-700/50 hover:bg-slate-700/50 hover:border-slate-600 text-slate-400'
+                                                    : isDarkMode 
+                                                        ? 'bg-slate-800/40 border-slate-700/50 hover:bg-slate-700/50 hover:border-slate-600 text-slate-400'
+                                                        : 'bg-white border-slate-200 hover:bg-slate-50 text-slate-500'
                                                 }`}
                                             >
                                                 <div className={`p-1.5 rounded-full mb-1 transition-colors relative ${
                                                     soundMood === opt.id && soundEnabled 
                                                     ? `bg-${opt.color}-500 text-white shadow-lg` 
-                                                    : 'bg-slate-800 text-slate-500 group-hover:bg-slate-700 group-hover:text-slate-300'
+                                                    : isDarkMode ? 'bg-slate-800 text-slate-500 group-hover:bg-slate-700 group-hover:text-slate-300' : 'bg-slate-100 text-slate-400 group-hover:bg-slate-200 group-hover:text-slate-600'
                                                 }`}>
                                                     <opt.icon size={20} strokeWidth={2.5} />
                                                     {soundMood === opt.id && soundEnabled && (
@@ -802,7 +852,7 @@ const FocusTimer: React.FC = () => {
                                                     )}
                                                 </div>
                                                 <span className={`text-[9px] font-bold uppercase tracking-wider ${
-                                                    soundMood === opt.id && soundEnabled ? 'text-white' : 'text-slate-500'
+                                                    soundMood === opt.id && soundEnabled ? (isDarkMode ? 'text-white' : 'text-slate-900') : 'text-slate-500'
                                                 }`}>{opt.label}</span>
                                             </button>
                                         ))}
@@ -812,12 +862,14 @@ const FocusTimer: React.FC = () => {
                                             onClick={() => setSoundEnabled(!soundEnabled)}
                                             className={`flex flex-col items-center justify-center p-2 rounded-xl border transition-all duration-200 active:scale-95 ${
                                                 !soundEnabled
-                                                ? 'bg-slate-700 border-slate-600 text-slate-300 shadow-inner'
-                                                : 'bg-slate-800/40 border-slate-700/50 hover:bg-slate-700/50 text-slate-400'
+                                                ? isDarkMode ? 'bg-slate-700 border-slate-600 text-slate-300 shadow-inner' : 'bg-slate-200 border-slate-300 text-slate-700 shadow-inner'
+                                                : isDarkMode ? 'bg-slate-800/40 border-slate-700/50 hover:bg-slate-700/50 text-slate-400' : 'bg-white border-slate-200 hover:bg-slate-50 text-slate-500'
                                             }`}
                                         >
                                             <div className={`p-1.5 rounded-full mb-1 transition-colors ${
-                                                !soundEnabled ? 'bg-slate-600 text-white' : 'bg-slate-800 text-slate-500'
+                                                !soundEnabled 
+                                                ? isDarkMode ? 'bg-slate-600 text-white' : 'bg-slate-400 text-white'
+                                                : isDarkMode ? 'bg-slate-800 text-slate-500' : 'bg-slate-100 text-slate-400'
                                             }`}>
                                                     {soundEnabled ? <Volume2 size={20} /> : <VolumeX size={20} />}
                                             </div>
@@ -840,7 +892,9 @@ const FocusTimer: React.FC = () => {
                                             className={`flex items-center gap-1.5 text-[10px] font-bold px-2.5 py-1 rounded-lg border transition-all ${
                                                 bgEffects 
                                                 ? 'bg-blue-500/20 text-blue-400 border-blue-500/50' 
-                                                : 'bg-slate-800 text-slate-500 border-slate-700 hover:text-slate-300'
+                                                : isDarkMode 
+                                                    ? 'bg-slate-800 text-slate-500 border-slate-700 hover:text-slate-300' 
+                                                    : 'bg-slate-100 text-slate-500 border-slate-200'
                                             }`}
                                         >
                                             <Layers size={12} />
@@ -852,7 +906,11 @@ const FocusTimer: React.FC = () => {
                                             <button
                                                 key={key}
                                                 onClick={() => setColorTheme(key)}
-                                                className={`w-10 h-10 rounded-full bg-gradient-to-br ${themes[key].preview} ring-2 ring-offset-2 ring-offset-[#0f172a] transition-all ${colorTheme === key ? 'ring-white scale-110 shadow-[0_0_15px_rgba(255,255,255,0.3)]' : 'ring-transparent opacity-70 hover:opacity-100'}`}
+                                                className={`w-10 h-10 rounded-full bg-gradient-to-br ${themes[key].preview} ring-2 ring-offset-2 transition-all ${
+                                                    colorTheme === key 
+                                                    ? `ring-${isDarkMode ? 'white' : 'slate-900'} scale-110 shadow-lg` 
+                                                    : `ring-transparent opacity-70 hover:opacity-100 ring-offset-${isDarkMode ? '[#0f172a]' : 'white'}`
+                                                }`}
                                                 title={`${key.charAt(0).toUpperCase() + key.slice(1)} Theme`}
                                             />
                                         ))}
