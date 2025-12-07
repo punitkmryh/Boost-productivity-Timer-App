@@ -1,6 +1,8 @@
 
 import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react';
-import { Play, Pause, RotateCcw, Maximize2, Minimize2, Music, Volume2, VolumeX, Clock, CloudRain, Zap, Wind, ArrowRight, Palette, Coffee, Moon, Trees, Layers } from 'lucide-react';
+import { Play, Pause, RotateCcw, Maximize2, Minimize2, Music, Volume2, VolumeX, Clock as ClockIcon, CloudRain, Zap, Wind, ArrowRight, Palette, Coffee, Moon, Trees, Layers } from 'lucide-react';
+import db from '../services/databaseService';
+import { FocusSession } from '../types';
 
 interface FocusTimerProps {
   isDarkMode?: boolean;
@@ -12,11 +14,11 @@ const ZenParticles = ({ color }: { color: string }) => {
       left: Math.random() * 100,
       top: Math.random() * 100,
       delay: Math.random() * 20,
-      duration: 15 + Math.random() * 20, // Slower, smoother duration
+      duration: 15 + Math.random() * 20, 
       size: Math.random() * 3 + 1,
       opacity: Math.random() * 0.4 + 0.1,
-      tx: Math.random() * 40 - 20, // Random x translation
-      ty: Math.random() * 40 - 20  // Random y translation
+      tx: Math.random() * 40 - 20,
+      ty: Math.random() * 40 - 20
     }));
   }, []);
 
@@ -48,25 +50,20 @@ const FocusTimer: React.FC<FocusTimerProps> = ({ isDarkMode = true }) => {
   const [isActive, setIsActive] = useState(false);
   const [customGoal, setCustomGoal] = useState('');
   
-  // Settings (stored in minutes for input convenience)
   const [focusDuration, setFocusDuration] = useState(25);
   const [breakDuration, setBreakDuration] = useState(5);
   
-  // High precision time state (milliseconds)
   const [timeLeft, setTimeLeft] = useState(25 * 60 * 1000); 
   const [initialTime, setInitialTime] = useState(25 * 60 * 1000);
   
-  // Refs for animation loop
   const endTimeRef = useRef<number | null>(null);
   const rafRef = useRef<number | null>(null);
 
   const [isZenMode, setIsZenMode] = useState(false);
   
-  // Audio State
   const [soundEnabled, setSoundEnabled] = useState(false);
   const [soundMood, setSoundMood] = useState<'focus' | 'rain' | 'zen' | 'forest' | 'night'>('focus');
 
-  // Theme State
   type ThemeKey = 'blue' | 'purple' | 'rose' | 'amber' | 'emerald';
   const [colorTheme, setColorTheme] = useState<ThemeKey>('blue');
   const [bgEffects, setBgEffects] = useState(true);
@@ -114,21 +111,51 @@ const FocusTimer: React.FC<FocusTimerProps> = ({ isDarkMode = true }) => {
     }
   };
 
-  // Real-time Clock
-  const [currentTime, setCurrentTime] = useState(new Date());
-
-  // Audio Refs
   const audioContextRef = useRef<AudioContext | null>(null);
   const gainNodeRef = useRef<GainNode | null>(null);
   const sourceNodesRef = useRef<AudioNode[]>([]);
 
-  // Update Real-time clock
   useEffect(() => {
-    const timer = setInterval(() => setCurrentTime(new Date()), 1000);
-    return () => clearInterval(timer);
+    if ('Notification' in window && Notification.permission === 'default') {
+      Notification.requestPermission();
+    }
   }, []);
 
-  // Audio Engine Logic
+  const playCompletionSound = useCallback(() => {
+    const AudioContext = window.AudioContext || (window as any).webkitAudioContext;
+    if (!audioContextRef.current) {
+        audioContextRef.current = new AudioContext();
+    }
+    const ctx = audioContextRef.current;
+    if (ctx.state === 'suspended') ctx.resume();
+
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+
+    osc.connect(gain);
+    gain.connect(ctx.destination);
+
+    osc.type = 'sine';
+    osc.frequency.setValueAtTime(523.25, ctx.currentTime);
+    osc.frequency.exponentialRampToValueAtTime(1046.5, ctx.currentTime + 0.1);
+
+    gain.gain.setValueAtTime(0, ctx.currentTime);
+    gain.gain.linearRampToValueAtTime(0.3, ctx.currentTime + 0.05);
+    gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 1.5);
+
+    osc.start(ctx.currentTime);
+    osc.stop(ctx.currentTime + 1.5);
+  }, []);
+
+  const sendNotification = useCallback((finishedMode: 'focus' | 'break') => {
+    if ('Notification' in window && Notification.permission === 'granted') {
+      new Notification('Boost Productivity', {
+        body: finishedMode === 'focus' ? "Great job! Time for a break." : "Break is over. Ready to focus?",
+        icon: '/favicon.ico'
+      });
+    }
+  }, []);
+
   const stopAudio = () => {
       sourceNodesRef.current.forEach(node => {
           try { (node as any).stop && (node as any).stop(); } catch(e) {}
@@ -237,7 +264,6 @@ const FocusTimer: React.FC<FocusTimerProps> = ({ isDarkMode = true }) => {
     }
   }, []);
 
-  // Manage Sound Volume/Switching
   useEffect(() => {
     if (soundEnabled && isActive && mode === 'focus') {
         initAudio(soundMood);
@@ -252,7 +278,6 @@ const FocusTimer: React.FC<FocusTimerProps> = ({ isDarkMode = true }) => {
     }
   }, [soundEnabled, isActive, soundMood, mode, initAudio]);
 
-  // High Precision Timer Logic
   const stopTimer = useCallback(() => {
       setIsActive(false);
       endTimeRef.current = null;
@@ -273,7 +298,6 @@ const FocusTimer: React.FC<FocusTimerProps> = ({ isDarkMode = true }) => {
 
   useEffect(() => {
     if (isActive) {
-        // Initialize end time relative to now + current remaining time
         if (!endTimeRef.current) {
             endTimeRef.current = Date.now() + timeLeft;
         }
@@ -284,10 +308,24 @@ const FocusTimer: React.FC<FocusTimerProps> = ({ isDarkMode = true }) => {
 
             if (remaining <= 0) {
                 // Timer Finished
+                playCompletionSound(); 
+                sendNotification(mode);
+                
+                // SAVE SESSION TO DATABASE
+                if (mode === 'focus') {
+                    db.addSession({
+                        id: Date.now().toString(),
+                        duration: focusDuration,
+                        timestamp: new Date().toISOString(),
+                        goal: customGoal,
+                        completed: true
+                    });
+                    setCustomGoal('');
+                }
+
                 setTimeLeft(0);
                 stopTimer();
                 
-                // Auto-switch logic
                 if (mode === 'focus') {
                     switchMode('break');
                 } else {
@@ -301,20 +339,22 @@ const FocusTimer: React.FC<FocusTimerProps> = ({ isDarkMode = true }) => {
 
         rafRef.current = requestAnimationFrame(loop);
     } else {
-        // When paused, we don't update timeLeft, but we clear the loop
         if (rafRef.current) {
             cancelAnimationFrame(rafRef.current);
             rafRef.current = null;
         }
-        endTimeRef.current = null; // Reset reference so resuming recalculates from Date.now()
+        endTimeRef.current = null;
     }
 
     return () => {
         if (rafRef.current) cancelAnimationFrame(rafRef.current);
     };
-  }, [isActive, mode, switchMode, stopTimer]); 
+  }, [isActive, mode, switchMode, stopTimer, playCompletionSound, sendNotification, focusDuration, customGoal]); 
 
   const toggleTimer = () => {
+      if (!isActive && 'Notification' in window && Notification.permission === 'default') {
+          Notification.requestPermission();
+      }
       setIsActive(!isActive);
   };
 
@@ -325,7 +365,6 @@ const FocusTimer: React.FC<FocusTimerProps> = ({ isDarkMode = true }) => {
     setInitialTime(duration);
   };
 
-  // Helper to set time from inputs (converted to ms)
   const handleDurationChange = (val: number, type: 'focus' | 'break') => {
       if (type === 'focus') {
           setFocusDuration(val);
@@ -349,21 +388,16 @@ const FocusTimer: React.FC<FocusTimerProps> = ({ isDarkMode = true }) => {
       return `${m < 10 ? '0' + m : m}:${s < 10 ? '0' + s : s}`;
   };
 
-  // Visual Calculations
   const radius = 220;
   const circumference = 2 * Math.PI * radius;
   const progressRatio = initialTime > 0 ? timeLeft / initialTime : 0;
   const strokeDashoffset = circumference - (progressRatio) * circumference;
-  
-  // Ticks Calculation
   const totalTicks = 60;
-  // Calculate how many ticks should be lit up based on remaining time
   const activeTicks = Math.ceil(progressRatio * totalTicks);
 
   return (
     <div className={`animate-fade-in flex flex-col h-full items-center transition-all duration-1000 relative w-full ${isZenMode ? 'fixed inset-0 z-50 bg-[#020617] justify-center' : 'justify-start md:justify-center'}`}>
         
-        {/* Custom Keyframes for enhanced motion */}
         <style>{`
           @keyframes float-slow {
             0%, 100% { transform: translate(0, 0) rotate(0deg); }
@@ -395,26 +429,21 @@ const FocusTimer: React.FC<FocusTimerProps> = ({ isDarkMode = true }) => {
           }
         `}</style>
 
-        {/* Dynamic Background Layer with Grid Pattern */}
         <div 
             className={`absolute inset-0 transition-all duration-1000 -z-20`}
             style={{ 
                 background: isDarkMode ? '#020617' : '#f8fafc',
-                backgroundImage: `radial-gradient(${themes[colorTheme].accent}1A 1px, transparent 1px)`,
+                backgroundImage: `radial-gradient(${themes[colorTheme].accent}${isDarkMode ? '1A' : '33'} 1px, transparent 1px)`,
                 backgroundSize: '40px 40px'
             }}
         ></div>
         
-        {/* Dynamic Background Gradients */}
         <div className={`absolute inset-0 bg-gradient-to-br ${themes[colorTheme].bg} transition-all duration-1000 -z-20 opacity-80`}></div>
         
-        {/* Zen Mode Dark Overlay */}
         <div className={`absolute inset-0 bg-black/80 backdrop-blur-sm transition-opacity duration-1000 -z-15 pointer-events-none ${isZenMode ? 'opacity-100' : 'opacity-0'}`}></div>
 
-        {/* Zen Particles */}
         {isZenMode && <ZenParticles color={themes[colorTheme].accent} />}
 
-        {/* Floating Animated Orbs with Smoother Motion */}
         <div className={`absolute inset-0 overflow-hidden pointer-events-none -z-10 transition-opacity duration-1000 ${isZenMode ? 'opacity-20' : 'opacity-100'}`}>
             {bgEffects && (
                 <>
@@ -432,7 +461,6 @@ const FocusTimer: React.FC<FocusTimerProps> = ({ isDarkMode = true }) => {
                             transition: 'background-color 1s ease'
                         }}
                     ></div>
-                    {/* Extra center orb for depth */}
                     <div 
                         className="absolute top-[30%] left-[30%] w-[40%] h-[40%] rounded-full blur-[100px] opacity-10 animate-pulse-glow"
                         style={{ 
@@ -444,13 +472,6 @@ const FocusTimer: React.FC<FocusTimerProps> = ({ isDarkMode = true }) => {
             )}
         </div>
 
-        {/* Real-time Clock */}
-        <div className={`absolute top-6 left-6 flex items-center gap-2 text-slate-500 font-mono text-sm transition-all duration-500 group z-50 ${isZenMode ? 'opacity-20 hover:opacity-100' : 'opacity-100'}`}>
-            <Clock size={16} />
-            {currentTime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-        </div>
-
-        {/* Zen Mode Toggle */}
         <div className={`absolute top-0 right-0 w-full flex justify-end items-center p-6 z-50 transition-all duration-500 group ${isZenMode ? 'opacity-20 hover:opacity-100' : 'opacity-100'}`}>
             <div className={`flex items-center gap-2 mr-4 ${isZenMode ? 'text-slate-500' : 'opacity-0'}`}>
                  <span className="w-2 h-2 rounded-full bg-blue-500 animate-pulse"></span>
@@ -465,35 +486,28 @@ const FocusTimer: React.FC<FocusTimerProps> = ({ isDarkMode = true }) => {
             </button>
         </div>
 
-        {/* Ambient Center Glow */}
         <div className={`absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[60vmin] h-[60vmin] rounded-full blur-[120px] pointer-events-none transition-all duration-[3000ms] ease-in-out ${
             mode === 'break' 
             ? 'bg-emerald-500/10' 
             : isActive ? `opacity-60 scale-125` : `opacity-20 scale-90`
         }`} style={{ backgroundColor: mode === 'focus' ? themes[colorTheme].stops[1] + '15' : undefined }}></div>
 
-        {/* MAIN VISUAL AREA */}
         <div className="flex-1 w-full flex flex-col items-center justify-center relative z-10 py-4">
 
-            {/* Break Message */}
             {mode === 'break' && (
                 <div className="absolute top-[5%] md:top-[10%] w-full max-w-md text-center z-20 animate-fade-in px-6">
                     <h2 className={`text-2xl md:text-3xl font-bold mb-2 drop-shadow-lg ${themes[colorTheme].preview.replace('from-', 'text-').split(' ')[0]}`}>Time for a Break</h2>
                     <p className={`${isDarkMode ? 'text-slate-300' : 'text-slate-600'} text-sm md:text-lg leading-relaxed`}>
                         Step away, stretch, or hydrate.<br/>
-                        {/* SAFE ACCESS TO LAST CLASS NAME (usually the 'to-' color) */}
                         <span className={`${themes[colorTheme].text.split(' ').pop()?.replace('to-', 'text-') || 'text-blue-400'} font-medium`}>Recharge your mind.</span>
                     </p>
                 </div>
             )}
 
-            {/* HIGH-END SVG Timer */}
             <div className={`relative transition-all duration-1000 ease-in-out flex items-center justify-center my-4 ${mode === 'break' ? 'scale-90 translate-y-6' : 'scale-100'}`}>
-                 {/* Responsive container using vmin to ensure it fits any screen */}
                  <div className="relative w-[65vmin] h-[65vmin] max-w-[400px] max-h-[400px] aspect-square flex items-center justify-center">
                     <svg className="w-full h-full transform -rotate-90 overflow-visible" viewBox="0 0 500 500">
                         <defs>
-                             {/* Animated Gradient: Rotating colors for flowing effect */}
                             <linearGradient id="focusGradient" x1="0%" y1="0%" x2="100%" y2="0%">
                                 <stop offset="0%" stopColor={themes[colorTheme].stops[0]} />
                                 <stop offset="50%" stopColor={themes[colorTheme].stops[1]} />
@@ -503,7 +517,7 @@ const FocusTimer: React.FC<FocusTimerProps> = ({ isDarkMode = true }) => {
                                     type="rotate" 
                                     from="0 0.5 0.5" 
                                     to="360 0.5 0.5" 
-                                    dur="15s" // Slower rotation for elegance
+                                    dur="15s" 
                                     repeatCount="indefinite" 
                                 />
                             </linearGradient>
@@ -514,7 +528,6 @@ const FocusTimer: React.FC<FocusTimerProps> = ({ isDarkMode = true }) => {
                                 <stop offset="100%" stopColor={themes[colorTheme].stops[2]} /> 
                             </linearGradient>
                             
-                            {/* High-End Glow Filter */}
                             <filter id="neon-glow" x="-50%" y="-50%" width="200%" height="200%">
                                 <feGaussianBlur stdDeviation="6" result="coloredBlur"/>
                                 <feComposite in="coloredBlur" in2="SourceGraphic" operator="in" result="softGlow"/>
@@ -525,7 +538,6 @@ const FocusTimer: React.FC<FocusTimerProps> = ({ isDarkMode = true }) => {
                             </filter>
                         </defs>
 
-                        {/* 1. Holographic Tick Marks Ring */}
                         <g transform="translate(250, 250)">
                             {Array.from({ length: totalTicks }).map((_, i) => {
                                 const isLit = i < activeTicks;
@@ -554,12 +566,10 @@ const FocusTimer: React.FC<FocusTimerProps> = ({ isDarkMode = true }) => {
                             })}
                         </g>
 
-                        {/* 2. Outer Rotating Spinner (Subtle) */}
                         <g className={`origin-center opacity-30 transition-all duration-[5000ms] ${isActive ? 'animate-spin-slow' : ''}`} style={{transformBox: 'fill-box', transformOrigin: 'center'}}>
                             <circle cx="250" cy="250" r={250} stroke={isDarkMode ? "#334155" : "#cbd5e1"} strokeWidth="1" fill="none" strokeDasharray="2, 8" />
                         </g>
 
-                        {/* 3. Glassy Background Track (Breathing) */}
                         <circle
                             cx="250"
                             cy="250"
@@ -570,7 +580,6 @@ const FocusTimer: React.FC<FocusTimerProps> = ({ isDarkMode = true }) => {
                             className={`drop-shadow-inner transition-opacity duration-1000 ${isActive ? 'opacity-40' : 'opacity-60 animate-pulse-slow'}`}
                         />
                         
-                        {/* 4. Main Progress Ring */}
                         <circle
                             cx="250"
                             cy="250"
@@ -582,17 +591,14 @@ const FocusTimer: React.FC<FocusTimerProps> = ({ isDarkMode = true }) => {
                             strokeDashoffset={strokeDashoffset}
                             strokeLinecap="round"
                             filter="url(#neon-glow)"
-                            // CRITICAL: No transition when active to ensure 60fps smoothness via JS ref updates
                             className={`${isActive ? '' : 'transition-all duration-500 ease-out'} ${isActive ? 'opacity-100' : 'opacity-90'}`}
                         />
                         
-                        {/* 5. Floating Progress Knob (Head) */}
                          <g style={{ 
                              transform: `rotate(${(1 - progressRatio) * 360}deg)`, 
                              transformOrigin: '250px 250px',
                              transition: isActive ? 'none' : 'transform 0.5s cubic-bezier(0.4, 0, 0.2, 1)' 
                             }}>
-                            {/* Comet Tail (Blurred Trail) */}
                              <circle 
                                 cx="250" 
                                 cy={250 - radius} 
@@ -601,7 +607,6 @@ const FocusTimer: React.FC<FocusTimerProps> = ({ isDarkMode = true }) => {
                                 className={`${isActive ? 'opacity-30' : 'opacity-0'}`} 
                                 style={{ filter: 'blur(12px)' }}
                              />
-                            {/* Outer Halo */}
                              <circle 
                                 cx="250" 
                                 cy={250 - radius} 
@@ -610,7 +615,6 @@ const FocusTimer: React.FC<FocusTimerProps> = ({ isDarkMode = true }) => {
                                 className={`${isActive ? 'opacity-60' : 'opacity-0'} animate-pulse`} 
                                 style={{ filter: 'blur(3px)' }}
                              />
-                             {/* Core */}
                              <circle 
                                 cx="250" 
                                 cy={250 - radius} 
@@ -620,7 +624,6 @@ const FocusTimer: React.FC<FocusTimerProps> = ({ isDarkMode = true }) => {
                              />
                          </g>
 
-                         {/* 6. Inner Pulsing Decorative Ring */}
                          <circle 
                             cx="250" cy="250" r="180" 
                             stroke="currentColor" 
@@ -632,9 +635,7 @@ const FocusTimer: React.FC<FocusTimerProps> = ({ isDarkMode = true }) => {
 
                     </svg>
                     
-                    {/* Time Text - Perfectly Centered */}
                     <div className="absolute inset-0 flex flex-col items-center justify-center z-10 pointer-events-none">
-                        {/* Wrapper for slight visual vertical correction if needed, though flex-center usually works */}
                         <div className="flex flex-col items-center justify-center translate-y-1"> 
                             <div className={`text-[14vmin] md:text-8xl font-mono font-bold tracking-tighter tabular-nums transition-all duration-300 leading-none ${
                                 mode === 'break' 
@@ -663,15 +664,12 @@ const FocusTimer: React.FC<FocusTimerProps> = ({ isDarkMode = true }) => {
                  </div>
             </div>
 
-            {/* Controls Panel */}
             <div className={`w-full max-w-3xl transition-all duration-700 transform px-4 z-20 ${isZenMode ? 'translate-y-20 opacity-0 pointer-events-none scale-95' : 'translate-y-0 opacity-100 scale-100'}`}>
                 <div className={`rounded-3xl p-1 shadow-2xl ${isDarkMode ? 'glass-panel' : 'bg-white border border-slate-200'}`}>
                     <div className={`rounded-[20px] p-6 md:p-8 lg:p-10 ${isDarkMode ? 'bg-[#0f172a]/80' : 'bg-slate-50'}`}>
                         
-                        {/* Mode Specific Controls */}
                         {mode === 'focus' ? (
                             <>
-                                {/* Inputs */}
                                 <div className="flex flex-col md:flex-row gap-4 mb-6">
                                     <div className="flex-1 group">
                                         <label className="text-[10px] text-slate-500 font-bold uppercase tracking-wider mb-2 block group-focus-within:text-blue-400 transition-colors">Goal</label>
@@ -722,7 +720,6 @@ const FocusTimer: React.FC<FocusTimerProps> = ({ isDarkMode = true }) => {
                                     </div>
                                 </div>
                                 
-                                {/* Main Buttons */}
                                 <div className="flex gap-4 w-full">
                                     <button
                                         onClick={toggleTimer}
@@ -767,7 +764,6 @@ const FocusTimer: React.FC<FocusTimerProps> = ({ isDarkMode = true }) => {
                             </>
                         ) : (
                             <div className="text-center flex flex-col gap-6">
-                                {/* Break Presets */}
                                 <div className="flex justify-center gap-3">
                                     {[5, 10, 15, 20].map(m => (
                                         <button 
@@ -814,10 +810,8 @@ const FocusTimer: React.FC<FocusTimerProps> = ({ isDarkMode = true }) => {
                             </div>
                         )}
 
-                        {/* Soundscape & Theme Options - Only in Focus Mode */}
                         {mode === 'focus' && (
                             <div className={`mt-8 pt-8 border-t space-y-6 ${isDarkMode ? 'border-slate-800' : 'border-slate-200'}`}>
-                                {/* Soundscape Options */}
                                 <div className="flex flex-col gap-4">
                                     <div className="flex items-center gap-2 text-xs font-bold text-slate-400 uppercase tracking-wider">
                                         <Music size={14} className="text-blue-400" /> Soundscape Mood
@@ -836,7 +830,9 @@ const FocusTimer: React.FC<FocusTimerProps> = ({ isDarkMode = true }) => {
                                                 onClick={() => { setSoundMood(opt.id as any); setSoundEnabled(true); }}
                                                 className={`flex flex-col items-center justify-center p-2 rounded-xl border transition-all duration-200 group active:scale-95 ${
                                                     soundMood === opt.id && soundEnabled
-                                                    ? `bg-${opt.color}-500/20 border-${opt.color}-500 shadow-[0_0_15px_rgba(0,0,0,0.2)]`
+                                                    ? isDarkMode
+                                                        ? `bg-${opt.color}-500/20 border-${opt.color}-500 shadow-[0_0_15px_rgba(0,0,0,0.2)]`
+                                                        : `bg-${opt.color}-50 border-${opt.color}-500 shadow-md`
                                                     : isDarkMode 
                                                         ? 'bg-slate-800/40 border-slate-700/50 hover:bg-slate-700/50 hover:border-slate-600 text-slate-400'
                                                         : 'bg-white border-slate-200 hover:bg-slate-50 text-slate-500'
@@ -858,7 +854,6 @@ const FocusTimer: React.FC<FocusTimerProps> = ({ isDarkMode = true }) => {
                                             </button>
                                         ))}
 
-                                        {/* Mute Button */}
                                         <button 
                                             onClick={() => setSoundEnabled(!soundEnabled)}
                                             className={`flex flex-col items-center justify-center p-2 rounded-xl border transition-all duration-200 active:scale-95 ${
@@ -881,13 +876,11 @@ const FocusTimer: React.FC<FocusTimerProps> = ({ isDarkMode = true }) => {
                                     </div>
                                 </div>
 
-                                {/* Visual Theme & Effects Options */}
                                 <div className="flex flex-col gap-4">
                                     <div className="flex justify-between items-center">
                                         <div className="flex items-center gap-2 text-xs font-bold text-slate-400 uppercase tracking-wider">
                                             <Palette size={14} className="text-purple-400" /> Visual Theme
                                         </div>
-                                        {/* Background Motion Toggle */}
                                         <button 
                                             onClick={() => setBgEffects(!bgEffects)}
                                             className={`flex items-center gap-1.5 text-[10px] font-bold px-2.5 py-1 rounded-lg border transition-all ${

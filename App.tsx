@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import Navigation from './components/Navigation';
 import ToDoList from './components/ToDoList';
@@ -7,8 +8,9 @@ import Analytics from './components/Analytics';
 import BoostCenter from './components/BoostCenter';
 import AIChat from './components/AIChat';
 import Settings from './components/Settings';
+import WorkTracker from './components/WorkTracker';
 import { AppView, UserProfile } from './types';
-import { Bell, Search, Settings as SettingsIcon, User, Zap, Sun, Moon } from 'lucide-react';
+import { Bell, Search, Settings as SettingsIcon, User, Zap, Sun, Moon, PanelLeft } from 'lucide-react';
 
 const App: React.FC = () => {
   const [currentView, setCurrentView] = useState<AppView>(AppView.TODOS);
@@ -18,11 +20,13 @@ const App: React.FC = () => {
     bio: 'Productivity enthusiast & developer.'
   });
   const [isDarkMode, setIsDarkMode] = useState(true);
+  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
 
   const renderView = () => {
     switch (currentView) {
-      case AppView.FOCUS: return <FocusTimer />;
+      case AppView.FOCUS: return <FocusTimer isDarkMode={isDarkMode} />;
       case AppView.TODOS: return <ToDoList />;
+      case AppView.WORK: return <WorkTracker />;
       case AppView.HABITS: return <HabitTracker />;
       case AppView.ANALYTICS: return <Analytics />;
       case AppView.BOOST: return <BoostCenter />;
@@ -35,7 +39,7 @@ const App: React.FC = () => {
   const AppLogo = () => (
     <button 
       onClick={() => setCurrentView(AppView.FOCUS)}
-      className="relative w-12 h-12 flex items-center justify-center group outline-none"
+      className="relative w-10 h-10 md:w-12 md:h-12 flex items-center justify-center group outline-none shrink-0"
       title="Go to Focus Timer"
     >
       <div className="absolute inset-0 bg-blue-600 rounded-2xl shadow-lg shadow-blue-600/20 overflow-hidden transform group-hover:scale-105 group-hover:rotate-3 transition-all duration-500 ease-out">
@@ -64,35 +68,55 @@ const App: React.FC = () => {
   );
 
   return (
-    <div className={`min-h-screen font-sans selection:bg-blue-500/30 flex overflow-hidden transition-colors duration-500 ${isDarkMode ? 'bg-[#020617] text-slate-50' : 'bg-slate-50 text-slate-900 light-mode'}`}>
+    <div className={`min-h-screen font-sans selection:bg-blue-500/30 flex overflow-hidden transition-colors duration-500 ${isDarkMode ? 'dark bg-[#020617] text-slate-50' : 'bg-slate-50 text-slate-900 light-mode'}`}>
       
       {/* Desktop Sidebar */}
-      <aside className={`hidden md:flex w-64 flex-col backdrop-blur-2xl border-r p-6 z-20 transition-all duration-500 ${isDarkMode ? 'bg-slate-900/50 border-slate-800' : 'bg-white/50 border-slate-200'}`}>
-        <div className="flex items-center gap-3 mb-10 px-2">
-            <AppLogo />
-            <div className="flex flex-col cursor-pointer" onClick={() => setCurrentView(AppView.FOCUS)}>
-                <span className={`text-xl font-bold tracking-tight transition-colors ${isDarkMode ? 'text-white' : 'text-slate-900'} hover:text-blue-400`}>Boost</span>
-                <span className="text-[10px] text-slate-500 font-bold uppercase tracking-widest">Productivity</span>
+      <aside className={`hidden md:flex flex-col backdrop-blur-2xl border-r p-4 z-20 transition-all duration-300 ease-in-out ${isDarkMode ? 'bg-slate-900/50 border-slate-800' : 'bg-white/50 border-slate-200'} ${isSidebarCollapsed ? 'w-20' : 'w-64'}`}>
+        
+        {/* Sidebar Header */}
+        <div className={`flex items-center mb-10 ${isSidebarCollapsed ? 'flex-col gap-4 justify-center' : 'justify-between'}`}>
+            <div className="flex items-center gap-3">
+                <AppLogo />
+                {!isSidebarCollapsed && (
+                    <div className="flex flex-col cursor-pointer overflow-hidden whitespace-nowrap animate-fade-in" onClick={() => setCurrentView(AppView.FOCUS)}>
+                        <span className={`text-xl font-bold tracking-tight transition-colors ${isDarkMode ? 'text-white' : 'text-slate-900'} hover:text-blue-400`}>Boost</span>
+                        <span className="text-[10px] text-slate-500 font-bold uppercase tracking-widest">Productivity</span>
+                    </div>
+                )}
             </div>
+            
+            {/* Toggle Button */}
+            <button 
+                onClick={() => setIsSidebarCollapsed(!isSidebarCollapsed)}
+                className={`p-1.5 rounded-lg text-slate-500 hover:text-white hover:bg-slate-800/50 transition-colors ${isSidebarCollapsed ? '' : ''}`}
+                title={isSidebarCollapsed ? "Expand Sidebar" : "Collapse Sidebar"}
+            >
+                <PanelLeft size={20} className={isSidebarCollapsed ? 'rotate-180 transition-transform' : 'transition-transform'} />
+            </button>
         </div>
 
-        <Navigation currentView={currentView} onChangeView={setCurrentView} orientation="vertical" isDarkMode={isDarkMode} />
+        <Navigation currentView={currentView} onChangeView={setCurrentView} orientation="vertical" isDarkMode={isDarkMode} isCollapsed={isSidebarCollapsed} />
 
-        <div className={`mt-auto pt-6 border-t ${isDarkMode ? 'border-slate-800' : 'border-slate-200'}`}>
+        <div className={`mt-auto pt-4 border-t ${isDarkMode ? 'border-slate-800' : 'border-slate-200'}`}>
              <button 
                 onClick={() => setCurrentView(AppView.SETTINGS)}
-                className={`flex items-center gap-3 p-3 rounded-xl transition-colors w-full text-left group ${currentView === AppView.SETTINGS ? (isDarkMode ? 'bg-slate-800' : 'bg-slate-100') : (isDarkMode ? 'hover:bg-slate-800/50' : 'hover:bg-slate-100')}`}
+                className={`flex items-center gap-3 p-2 rounded-xl transition-colors w-full text-left group ${currentView === AppView.SETTINGS ? (isDarkMode ? 'bg-slate-800' : 'bg-slate-100') : (isDarkMode ? 'hover:bg-slate-800/50' : 'hover:bg-slate-100')} ${isSidebarCollapsed ? 'justify-center' : ''}`}
+                title={isSidebarCollapsed ? "Settings" : undefined}
              >
-                <div className="w-10 h-10 rounded-full bg-gradient-to-tr from-blue-500 to-purple-500 p-[2px]">
+                <div className="w-10 h-10 rounded-full bg-gradient-to-tr from-blue-500 to-purple-500 p-[2px] shrink-0">
                     <div className={`w-full h-full rounded-full flex items-center justify-center overflow-hidden ${isDarkMode ? 'bg-slate-900' : 'bg-white'}`}>
                          <span className={`font-bold text-xs ${isDarkMode ? 'text-white' : 'text-slate-900'}`}>{userProfile.name.substring(0,2).toUpperCase()}</span>
                     </div>
                 </div>
-                <div className="overflow-hidden flex-1">
-                    <div className={`text-sm font-medium transition-colors truncate ${isDarkMode ? 'text-white group-hover:text-blue-400' : 'text-slate-900 group-hover:text-blue-600'}`}>{userProfile.name}</div>
-                    <div className="text-xs text-slate-500 truncate">Pro Member</div>
-                </div>
-                <SettingsIcon size={16} className={`transition-colors ${isDarkMode ? 'text-slate-500 group-hover:text-white' : 'text-slate-400 group-hover:text-slate-600'}`} />
+                {!isSidebarCollapsed && (
+                    <>
+                        <div className="overflow-hidden flex-1 animate-fade-in">
+                            <div className={`text-sm font-medium transition-colors truncate ${isDarkMode ? 'text-white group-hover:text-blue-400' : 'text-slate-900 group-hover:text-blue-600'}`}>{userProfile.name}</div>
+                            <div className="text-xs text-slate-500 truncate">Pro Member</div>
+                        </div>
+                        <SettingsIcon size={16} className={`transition-colors ${isDarkMode ? 'text-slate-500 group-hover:text-white' : 'text-slate-400 group-hover:text-slate-600'}`} />
+                    </>
+                )}
              </button>
         </div>
       </aside>
@@ -104,7 +128,7 @@ const App: React.FC = () => {
         <header className={`hidden md:flex justify-between items-center px-8 py-5 backdrop-blur-md sticky top-0 z-20 border-b transition-colors duration-500 ${isDarkMode ? 'bg-[#020617]/80 border-slate-800/50' : 'bg-white/80 border-slate-200/50'}`}>
              <div className="flex flex-col">
                 <h1 className={`text-xl font-bold capitalize flex items-center gap-2 ${isDarkMode ? 'text-white' : 'text-slate-900'}`}>
-                  {currentView === AppView.BOOST ? 'Boost Center' : currentView.toLowerCase()}
+                  {currentView === AppView.BOOST ? 'Boost Center' : currentView === AppView.WORK ? 'Work Board' : currentView.toLowerCase()}
                   <span className="px-2 py-0.5 rounded-full bg-blue-500/10 text-blue-400 text-[10px] font-bold uppercase tracking-wider border border-blue-500/20">Beta</span>
                 </h1>
                 <p className="text-xs text-slate-500">{new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })}</p>

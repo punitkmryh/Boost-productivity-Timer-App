@@ -1,22 +1,32 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Trophy, Zap, Award, Flame, Timer, Wind, ChevronRight, Activity, Medal, Star } from 'lucide-react';
+import db from '../services/databaseService';
 
 const BoostCenter: React.FC = () => {
   const [activeBoost, setActiveBoost] = useState<string | null>(null);
+  const [userXP, setUserXP] = useState(0);
+
+  useEffect(() => {
+      setUserXP(db.getUserXP());
+  }, []);
 
   const leaderboard = [
     { name: "Jake.0", xp: 12500, rank: 1, avatar: "bg-blue-500" },
     { name: "Sarah K.", xp: 11200, rank: 2, avatar: "bg-purple-500" },
     { name: "Mike D.", xp: 10850, rank: 3, avatar: "bg-emerald-500" },
     { name: "Alex R.", xp: 9500, rank: 4, avatar: "bg-amber-500" },
-    { name: "You", xp: 850, rank: 142, avatar: "bg-indigo-500" },
+    { name: "You", xp: userXP, rank: 142, avatar: "bg-indigo-500" },
   ];
+
+  // Re-sort leaderboard with current user XP
+  const sortedLeaderboard = [...leaderboard].sort((a, b) => b.xp - a.xp);
+  const userRank = sortedLeaderboard.findIndex(u => u.name === "You") + 1;
 
   const badges = [
     { name: "Early Bird", desc: "Complete a task before 7 AM", icon: <Star size={16} />, earned: true, color: "text-amber-400 bg-amber-500/10 border-amber-500/20" },
     { name: "Streak Master", desc: "7 day habit streak", icon: <Flame size={16} />, earned: true, color: "text-orange-400 bg-orange-500/10 border-orange-500/20" },
-    { name: "Deep Work", desc: "4h focus session", icon: <Timer size={16} />, earned: false, color: "text-slate-500 bg-slate-800 border-slate-700" },
+    { name: "Deep Work", desc: "4h focus session", icon: <Timer size={16} />, earned: userXP > 2000, color: userXP > 2000 ? "text-blue-400 bg-blue-500/10 border-blue-500/20" : "text-slate-500 bg-slate-800 border-slate-700" },
     { name: "Zen Master", desc: "10 breaks taken", icon: <Wind size={16} />, earned: false, color: "text-slate-500 bg-slate-800 border-slate-700" },
   ];
 
@@ -34,21 +44,19 @@ const BoostCenter: React.FC = () => {
             </div>
             <div>
                 <div className="text-xs text-slate-400 uppercase font-bold tracking-wider">Your Rank</div>
-                <div className="text-xl font-bold text-white">#142 <span className="text-sm font-normal text-slate-500">Top 5%</span></div>
+                <div className="text-xl font-bold text-white">#{userRank} <span className="text-sm font-normal text-slate-500">Top 5%</span></div>
             </div>
         </div>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
           
-          {/* Quick Boosts */}
           <div className="lg:col-span-2 space-y-8">
               <section>
                 <h3 className="text-lg font-bold text-white mb-4 flex items-center gap-2">
                     <Zap size={20} className="text-blue-400" /> Quick Boosts
                 </h3>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    {/* Breathing Boost */}
                     <button 
                         onClick={() => setActiveBoost('breathing')}
                         className="group relative overflow-hidden bg-gradient-to-br from-blue-600 to-indigo-600 rounded-3xl p-6 text-left shadow-lg hover:shadow-blue-500/20 transition-all active:scale-95"
@@ -66,7 +74,6 @@ const BoostCenter: React.FC = () => {
                         </div>
                     </button>
 
-                    {/* Stretch Boost */}
                     <button className="group relative overflow-hidden bg-slate-800 rounded-3xl p-6 text-left border border-slate-700 hover:border-slate-500 transition-all active:scale-95">
                          <div className="relative z-10">
                             <div className="w-12 h-12 bg-slate-700 rounded-xl flex items-center justify-center mb-4 text-emerald-400">
@@ -100,7 +107,6 @@ const BoostCenter: React.FC = () => {
               </section>
           </div>
 
-          {/* Leaderboard */}
           <div className="glass-panel rounded-3xl p-6 h-fit border-slate-700/50">
              <div className="flex items-center justify-between mb-6">
                  <h3 className="text-lg font-bold text-white flex items-center gap-2">
@@ -110,10 +116,10 @@ const BoostCenter: React.FC = () => {
              </div>
              
              <div className="space-y-4">
-                 {leaderboard.map((user, idx) => (
+                 {sortedLeaderboard.map((user, idx) => (
                      <div key={idx} className={`flex items-center gap-4 p-3 rounded-xl transition-colors ${user.name === 'You' ? 'bg-blue-600/10 border border-blue-500/30' : 'hover:bg-slate-800/50'}`}>
                          <div className={`w-6 text-center font-bold ${idx < 3 ? 'text-yellow-400' : 'text-slate-500'}`}>
-                             {user.rank}
+                             {idx + 1}
                          </div>
                          <div className={`w-8 h-8 rounded-full ${user.avatar} flex items-center justify-center text-xs font-bold text-white ring-2 ring-slate-900`}>
                              {user.name.charAt(0)}
@@ -133,7 +139,6 @@ const BoostCenter: React.FC = () => {
 
       </div>
 
-      {/* Boost Overlay (Mockup for Breathing) */}
       {activeBoost === 'breathing' && (
           <div className="fixed inset-0 z-[60] bg-[#020617]/90 backdrop-blur-xl flex items-center justify-center p-6 animate-fade-in">
               <div className="text-center max-w-md w-full">

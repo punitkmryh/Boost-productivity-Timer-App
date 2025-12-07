@@ -1,9 +1,9 @@
 
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Habit } from '../types';
 import { Plus, MoreVertical, ChevronLeft, ChevronRight, Calendar, Flame, X, Check, Trophy, Grid, List } from 'lucide-react';
+import db from '../services/databaseService';
 
-// Helper to get consistent date keys (YYYY-MM-DD) handling timezone offsets
 const getDateKey = (date: Date) => {
     const offset = date.getTimezoneOffset();
     const localDate = new Date(date.getTime() - (offset * 60 * 1000));
@@ -11,25 +11,18 @@ const getDateKey = (date: Date) => {
 };
 
 const HabitTracker: React.FC = () => {
-  // Streak Calculation Logic
   const calculateStreak = (completedDates: Record<string, boolean>) => {
       let streak = 0;
       const today = new Date();
       const todayKey = getDateKey(today);
-      
       let checkDate = new Date(today);
       
-      // If today is checked, start counting from today.
-      // If today is NOT checked, check yesterday. If yesterday is checked, streak is alive from yesterday.
       if (!completedDates[todayKey]) {
           checkDate.setDate(checkDate.getDate() - 1);
           const yesterdayKey = getDateKey(checkDate);
-          if (!completedDates[yesterdayKey]) {
-              return 0; // Streak broken
-          }
+          if (!completedDates[yesterdayKey]) return 0;
       }
 
-      // Count backwards
       while (true) {
           const key = getDateKey(checkDate);
           if (completedDates[key]) {
@@ -42,43 +35,36 @@ const HabitTracker: React.FC = () => {
       return streak;
   };
 
-  const [habits, setHabits] = useState<Habit[]>([
-    {
-      id: '1',
-      title: 'Code Daily',
-      goalDescription: 'For at least 1 hour',
-      completedDates: {}, 
-      color: 'bg-red-500',
-      streak: 0
-    },
-    {
-      id: '2',
-      title: 'Practice L33tcode',
-      goalDescription: '60 minutes daily',
-      completedDates: {},
-      color: 'bg-blue-500',
-      streak: 0
-    },
-    {
-      id: '3',
-      title: 'Workout',
-      goalDescription: 'At least twice per week',
-      completedDates: {},
-      color: 'bg-green-500',
-      streak: 0
-    },
-  ]);
+  const [habits, setHabits] = useState<Habit[]>([]);
+
+  // Load from DB
+  useEffect(() => {
+      const loaded = db.getHabits();
+      if (loaded.length === 0) {
+          // Defaults
+          const defaults = [
+            { id: '1', title: 'Code Daily', goalDescription: 'For at least 1 hour', completedDates: {}, color: 'bg-red-500', streak: 0 },
+            { id: '2', title: 'Practice L33tcode', goalDescription: '60 minutes daily', completedDates: {}, color: 'bg-blue-500', streak: 0 },
+            { id: '3', title: 'Workout', goalDescription: 'At least twice per week', completedDates: {}, color: 'bg-green-500', streak: 0 },
+          ];
+          setHabits(defaults);
+          db.saveHabits(defaults);
+      } else {
+          setHabits(loaded);
+      }
+  }, []);
+
+  // Save to DB
+  useEffect(() => {
+      if(habits.length > 0) db.saveHabits(habits);
+  }, [habits]);
 
   const [showAddModal, setShowAddModal] = useState(false);
   const [newHabit, setNewHabit] = useState({ title: '', desc: '', color: 'bg-blue-500' });
-  
-  // Date Navigation State
   const [referenceDate, setReferenceDate] = useState(new Date());
   const [viewMode, setViewMode] = useState<'week' | 'month'>('week');
-  // Allow nulls for calendar padding in Month view
   const [datesToDisplay, setDatesToDisplay] = useState<(Date | null)[]>([]);
 
-  // Generate dates based on view mode and reference date
   useEffect(() => {
     const dates: (Date | null)[] = [];
     const tempDate = new Date(referenceDate);
@@ -87,7 +73,6 @@ const HabitTracker: React.FC = () => {
         const day = tempDate.getDay(); 
         const diff = tempDate.getDate() - day; 
         tempDate.setDate(diff); 
-        
         for (let i = 0; i < 7; i++) {
             dates.push(new Date(tempDate));
             tempDate.setDate(tempDate.getDate() + 1);
@@ -96,14 +81,9 @@ const HabitTracker: React.FC = () => {
         const year = tempDate.getFullYear();
         const month = tempDate.getMonth();
         const daysInMonth = new Date(year, month + 1, 0).getDate();
-        
-        // Find start day offset (0 = Sunday, 1 = Monday...)
         const firstDayOfMonth = new Date(year, month, 1).getDay();
         
-        // Add padding nulls so the 1st starts on the correct column
-        for(let i=0; i < firstDayOfMonth; i++) {
-            dates.push(null);
-        }
+        for(let i=0; i < firstDayOfMonth; i++) dates.push(null);
 
         const iterDate = new Date(year, month, 1);
         for (let i = 0; i < daysInMonth; i++) {
@@ -113,29 +93,6 @@ const HabitTracker: React.FC = () => {
     }
     setDatesToDisplay(dates);
   }, [referenceDate, viewMode]);
-
-  // Initial Data population (Mock)
-  useEffect(() => {
-      const today = new Date();
-      const yesterday = new Date(today); yesterday.setDate(yesterday.getDate() - 1);
-      const dayBefore = new Date(today); dayBefore.setDate(dayBefore.getDate() - 2);
-      
-      const k1 = getDateKey(today);
-      const k2 = getDateKey(yesterday);
-      const k3 = getDateKey(dayBefore);
-
-      setHabits(prev => prev.map(h => {
-          if (Object.keys(h.completedDates).length === 0 && h.id === '1') {
-              const initialDates = { [k1]: true, [k2]: true, [k3]: true };
-              return { ...h, completedDates: initialDates, streak: calculateStreak(initialDates) };
-          }
-          if (Object.keys(h.completedDates).length === 0 && h.id === '2') {
-               const initialDates = { [k1]: true };
-               return { ...h, completedDates: initialDates, streak: calculateStreak(initialDates) };
-          }
-          return h;
-      }));
-  }, []);
 
   const navigateDate = (direction: 'prev' | 'next') => {
       const newDate = new Date(referenceDate);
@@ -205,10 +162,8 @@ const HabitTracker: React.FC = () => {
   const colors = ['bg-red-500', 'bg-orange-500', 'bg-amber-500', 'bg-green-500', 'bg-emerald-500', 'bg-teal-500', 'bg-cyan-500', 'bg-blue-500', 'bg-indigo-500', 'bg-violet-500', 'bg-purple-500', 'bg-fuchsia-500', 'bg-pink-500', 'bg-rose-500'];
 
   const getRangeLabel = () => {
-      // Find first non-null date for label
       const validDates = datesToDisplay.filter(d => d !== null) as Date[];
       if (validDates.length === 0) return '';
-      
       const start = validDates[0];
       const end = validDates[validDates.length - 1];
       
@@ -230,7 +185,6 @@ const HabitTracker: React.FC = () => {
           <p className="text-slate-400">Build better routines, one day at a time</p>
         </div>
         
-        {/* Level Banner */}
         <div className="glass-panel px-4 py-2 rounded-xl flex items-center gap-4 border-amber-500/20 bg-amber-500/5">
             <div className="w-10 h-10 rounded-full bg-amber-500/20 flex items-center justify-center text-amber-500">
                 <Trophy size={20} />
@@ -253,7 +207,6 @@ const HabitTracker: React.FC = () => {
         </div>
       </div>
 
-      {/* View & Date Navigator */}
       <div className="bg-slate-800/30 backdrop-blur-sm rounded-2xl p-2 mb-8 flex flex-col sm:flex-row justify-between items-center border border-slate-700/50 gap-4 sm:gap-0 shadow-lg">
         <button 
             onClick={() => navigateDate('prev')}
@@ -297,7 +250,6 @@ const HabitTracker: React.FC = () => {
         </button>
       </div>
 
-      {/* Habits List */}
       <div className="grid grid-cols-1 gap-4">
         {habits.map((habit) => (
           <div key={habit.id} className="bg-slate-800/40 border border-slate-700/50 rounded-3xl p-5 hover:border-slate-600 transition-colors shadow-sm">
@@ -322,20 +274,15 @@ const HabitTracker: React.FC = () => {
               </button>
             </div>
 
-            {/* Calendar Grid */}
             <div className={`grid grid-cols-7 gap-2`}>
-                {/* Month View Headers */}
                 {viewMode === 'month' && ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map(day => (
                     <div key={day} className="text-center text-[10px] uppercase font-bold text-slate-500 py-1">
                         {day}
                     </div>
                 ))}
                 
-                {/* Dates */}
                 {datesToDisplay.map((date, index) => {
-                    // Render Empty Slot for padding
                     if (!date) return <div key={`empty-${index}`} className="w-full aspect-square" />;
-
                     const dateKey = getDateKey(date);
                     const isCompleted = habit.completedDates[dateKey];
                     const isTodayDate = isToday(date);
@@ -357,20 +304,14 @@ const HabitTracker: React.FC = () => {
                         }`}
                         title={date.toDateString()}
                     >
-                        {/* Day Name (Only in Week View) */}
                         <span className={`text-[10px] uppercase font-bold opacity-60 mb-0.5 ${viewMode === 'month' ? 'hidden' : 'block'}`}>{getDayName(date)}</span>
-                        
-                        {/* Date Number */}
                         <span className={`font-bold ${viewMode === 'month' ? 'text-xs md:text-sm' : 'text-sm'} ${isCompleted ? 'text-white' : ''} z-10 relative`}>{getDateNum(date)}</span>
                         
-                        {/* Completion indicator for week view only */}
                         {isCompleted && viewMode === 'week' && (
                             <div className="absolute inset-0 flex items-center justify-center">
                                 <Check size={28} className="text-white/20 scale-150" />
                             </div>
                         )}
-
-                        {/* Checkmark Animation (Small for month view) */}
                         <div className={`mt-1 transition-all duration-300 ${isCompleted ? 'opacity-100 translate-y-0 scale-100' : 'opacity-0 translate-y-2 scale-50'} ${viewMode === 'month' ? 'hidden' : 'block'} z-10`}>
                             <div className="bg-white/20 rounded-full p-0.5">
                                 <Check size={10} strokeWidth={4} />
@@ -384,7 +325,6 @@ const HabitTracker: React.FC = () => {
         ))}
       </div>
 
-      {/* Add Habit Modal */}
       {showAddModal && (
          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-fade-in">
             <div className="bg-slate-900 border border-slate-700 rounded-3xl p-6 max-w-md w-full shadow-2xl transform scale-100 transition-all">
@@ -445,4 +385,3 @@ const HabitTracker: React.FC = () => {
 };
 
 export default HabitTracker;
-    
